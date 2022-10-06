@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en">
+    <head>
+        <title>png opener (shitty)</title>
+
+        <style>
+            * {
+                font-family: "Courier New", Courier, monospace;
+            }
+
+            #out:nth-child(2n) {
+                background-color: #ccc;
+            }
+
+            #out {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                top: 50vh;
+                overflow: scroll;
+            }
+
+
+            .parsebtn {
+                display: inline-block;
+                width: 300px;
+                height: 300px;
+            }
+
+            input, .parsebtn {
+                font-size: 25px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <input id="file" type="file" accept="image/png" /><br/>
+        <button class="parsebtn" onclick="parse()">parse file</button>
+        <button class="parsebtn" onclick="copylogs()">COPY</button>
+
+        <fieldset id="out">
+            <legend>Log:
+                <button onclick="document.getElementById('out').querySelectorAll('div').forEach(e => e.remove()); logstr = ''">CLEAR</button>
+                <button onclick="copylogs()"><b>COPY</b></button>
+            </legend>
+        </fieldset>
+        <!--canvas id="canvas">your browser does not support canvas :( get a better browser</canvas-->
+
+        <script>
+
+            function buf2hex(buffer)
+            { // buffer is an ArrayBuffer
+            return [...new Uint8Array(buffer)]
+                .map(x => x.toString(16).padStart(2, '0'))
+                .join('');
+            }
+
+            function log(str, bg="#fff")
+            {
+                logstr += str + ""
+                console.log(str)
+                line = document.createElement("div")
+                line.innerText = str
+                // format warnings / errors
+                line.style.backgroundColor = bg
+                document.getElementById("out").appendChild(line)
+            }
+
+            function copylogs(){ // def not copied from stackoverflow :)))))
+                const mySmartTextarea = document.createElement("textarea");
+                mySmartTextarea.innerHTML = logstr;
+                const parentElement = document.body.appendChild(mySmartTextarea);
+                mySmartTextarea.select();
+                document.execCommand("copy");
+                document.body.removeChild(mySmartTextarea);
+            }
+
+            logstr = ""
+
+            file = document.querySelector("#file")
+
+            filetype = "N/A"
+            isvalid = false
+
+            coltypes = [
+                "greyscale",
+                "ERROR - OUT OF RANGE (1)",
+                "truecolor",
+                "indexed-color",
+                "greyscale+alpha",
+                "ERROR - OUT OF RANGE (5)",
+                "truecolor+alpha"
+            ]
+
+            validbitdepths = [
+                [1, 2, 4, 8, 16],
+                [-1],
+                [8, 16],
+                [1, 2, 4, 8],
+                [8, 16],
+                [-1],
+                [8, 16]
+            ]
+
+            function bitdepthisvalid(coltype, bitdepth)
+            {
+                return validbitdepths[coltype].includes(bitdepth)
+            }
+
+            function parse()
+            {
+                var reader = new FileReader();
+                
+                reader.onload = function() {
+                    var arrayBuffer = this.result
+                    imageraw = new Uint8Array(arrayBuffer)
+                    imagehex = buf2hex(arrayBuffer)
+
+                    filetype =
+                    String.fromCharCode(imageraw[1]) +
+                    String.fromCharCode(imageraw[2]) +
+                    String.fromCharCode(imageraw[3])
+
+                    chunkType = ""
+                    chunkLen = 0
+                    offset = 8
+                    maxChunks = 10 // increase if chunks are being cut off
+                    curChunk = 0
+
+                    validchunks = true
+
+                    IDAT = []
+                    IHDR = ["N/A"]
+
+                    chunks = []
+
+
+                    // log chunks
+                    log("Chunks:", "#00f")
+                    while (chunkType != "IEND" && maxChunks > curChunk)
+                    {
+                        curChunk++
+                        chunkLen = 
+                            imageraw[offset + 0] +
+                            imageraw[offset + 1] +
+                            imageraw[offset + 2] +
+                            imageraw[offset + 3]
+                        
+                        chunkType =
+                            String.fromCharCode(imageraw[offset + 4]) +
+                            String.fromCharCode(imageraw[offset + 5]) +
+                            String.fromCharCode(imageraw[offset + 6]) +
+                            String.fromCharCode(imageraw[offset + 7])
+
+                        log(`(${chunkLen} byte(s)) ${chunkType}`)
+
+                        data = imageraw.slice(offset + 8, offset + 8 + chunkLen + 1)
+                        //                             ^           ^
+                        //        counteract the length and type metadata in the chunk
+
+                        if (chunkType == "IDAT") IDAT += data // may be multiple idat chunks
+                        else if (/^[a-z]+$/i.test(chunkType)) eval("var " + chunkType + " = data") // make var for each chunk
+                        else
+                        {
+                            log(`!WARN: STRING ${chunkType} CANNOT BE CONVERTED TO VAR!`, "#ff0")
+                            validchunks = false
+                        }
+
+                        chunks.push({
+                            "type": chunkType,
+                            "metadata": {
+                                "len": chunkLen,
+                                "chunkOffset": offset
+                            },
+                            "data": data
+                        })
+
+                        // vvvv offset should be where the new chunk is
+                        offset += chunkLen + 4 + 4 + 4
+                        //                  len typ crc
+                    }
+
+                    IDAT = Uint8Array.from(IDAT)
+
+                    /*
+                    firstChunkLen = 
+                    imageraw[8] +
+                    imageraw[9] +
+                    imageraw[10] +
+                    imageraw[11]
+
+                    firstChunkType =
+                    String.fromCharCode(imageraw[12]) +
+                    String.fromCharCode(imageraw[13]) +
+                    String.fromCharCode(imageraw[14]) +
+                    String.fromCharCode(imageraw[15])
+
+                    */
+
+                    // parse IHDR:
+
+                    width =
+                    IHDR[0] +
+                    IHDR[1] +
+                    IHDR[2] +
+                    IHDR[3]
+
+                    height =
+                    IHDR[4] +
+                    IHDR[5] +
+                    IHDR[6] +
+                    IHDR[7]
+
+                    bitdepth = IHDR[8]
+
+
+                    coltype = coltypes[IHDR[9]]
+
+                    isvalid = // this should be the same in every png file
+                    imageraw[0] == 137   &&
+                    imageraw[1] == 80    &&
+                    imageraw[2] == 78    &&
+                    imageraw[3] == 71    &&
+                    imageraw[4] == 13    &&
+                    imageraw[5] == 10    &&
+                    imageraw[6] == 26    &&
+                    imageraw[7] == 10    &&
+                    coltype != undefined &&
+                    height > 0           &&
+                    width > 0            &&
+                    bitdepthisvalid(IHDR[9], IHDR[8])
+
+                    log(`Image info:`, "#0f0")
+                    log(`Width: ${width}`)
+                    log(`Height: ${height}`)
+                    log(`Type: ${filetype}`)
+                    log(`Bitdepth: ${bitdepth}`)
+                    if (coltype != undefined) log(`Colortype: ${coltype} (${IHDR[9]})`)
+                    else                      log(`Colortype: ERR (${IHDR[9]})`)
+                    log(`Valid?: ${isvalid}`)
+                    log(`Valid chunks?: ${validchunks}`)
+
+
+
+                    //log(imageraw, "#00f")
+
+                    log("IDAT:", "#f0f")
+                    log(IDAT, "#f0f")
+
+                    log("IHDR:", "#f0f")
+                    log(IHDR, "#f0f")
+                    //binaryString = String.fromCharCode.apply(null, image);
+                }
+
+                reader.readAsArrayBuffer(file.files[0]);
+            }
+        </script>
+    </body>
+</html>
