@@ -9,43 +9,67 @@
                 font-family: "Courier New", Courier, monospace;
             }
 
-            #out:nth-child(2n) {
-                background-color: #ccc;
+            #wrapper {
+                display: flex;
+
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+
+                flex-wrap: wrap;
+                flex-direction: row;
+            }
+
+            fieldset {
+                overflow: scroll;
+
+                flex-basis: calc(50% - 40px);
+                background-color: #fff;
+                width: 50%;
+                height: 50%;
+
+                min-width: 0px;
             }
 
             #out {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                top: 50vh;
-                overflow: scroll;
+                min-width: 100%;
             }
 
-
-            .parsebtn {
-                display: inline-block;
-                width: 300px;
-                height: 300px;
-            }
-
-            input, .parsebtn {
+            input, .btn {
                 font-size: 25px;
+            }
+
+            .btn {
+                width: 150px;
+                height: 150px;
             }
         </style>
     </head>
 
     <body>
-        <input id="file" type="file" accept="image/png" /><br/>
-        <button class="parsebtn" onclick="parse()">parse file</button>
-        <button class="parsebtn" onclick="copylogs()">COPY</button>
+        <div id="wrapper">
+            <fieldset>
+                <legend>Buttons:</legend>
+                <input id="file" type="file" accept="image/png" /><hr/>
+                <button class="btn" onclick="parse()">Parse PNG</button>
+                <button class="btn" onclick="copylogs()">Copy logs</button>
+            </fieldset>
 
-        <fieldset id="out">
-            <legend>Log:
-                <button onclick="document.getElementById('out').querySelectorAll('div').forEach(e => e.remove()); logstr = ''">CLEAR</button>
-                <button onclick="copylogs()"><b>COPY</b></button>
-            </legend>
-        </fieldset>
+    
+            <fieldset id="chunks">
+                <legend>Chunks:</legend>
+            </fieldset>
+    
+            <fieldset id="out">
+                <legend>Log:
+                    <button onclick="document.getElementById('out').querySelectorAll('div').forEach(e => e.remove()); logstr = ''">CLEAR</button>
+                    <button onclick="copylogs()"><b>COPY</b></button>
+                </legend>
+            </fieldset>
+        </div>
+
         <!--canvas id="canvas">your browser does not support canvas :( get a better browser</canvas-->
 
         <script>
@@ -68,13 +92,31 @@
                 document.getElementById("out").appendChild(line)
             }
 
-            function copylogs(){ // def not copied from stackoverflow :)))))
+            function copylogs()
+            { // def not copied from stackoverflow :)))))
                 const mySmartTextarea = document.createElement("textarea");
                 mySmartTextarea.innerHTML = logstr;
                 const parentElement = document.body.appendChild(mySmartTextarea);
                 mySmartTextarea.select();
                 document.execCommand("copy");
                 document.body.removeChild(mySmartTextarea);
+            }
+
+            function addchunks(data)
+            {
+                chunk = document.createElement("fieldset")
+                title = document.createElement("legend")
+
+                document.getElementById("chunks").appendChild(chunk)
+
+                title.innerText = data.name
+                
+                descDiv = document.createElement("div")
+                descDiv.innerText = data.desc
+
+                chunk.appendChild(title)
+
+                chunk.appendChild(descDiv)
             }
 
             logstr = ""
@@ -103,6 +145,27 @@
                 [-1],
                 [8, 16]
             ]
+            
+            descs = {
+                "IHDR": "Image header chunk.",
+                "PLTE": "Palette entries.",
+                "IDAT": "Actual image data.",
+                "IEND": "End of the image file.",
+                "tRNS": "Indicates that the image uses \"simple\" transparency.",
+                "gAMA": "The gamma value of the image.",
+                "cHRM": "Specifies chromaticities of the red, green, and blue primaries.",
+                "sRGB": "Indicates that the image conforms to the sRGB color space.",
+                "iCCP": "Indicates that the image conforms to the embedded ICC profile.",
+                "iTXt": "International text metadata about the image.",
+                "tEXt": "Text metadata about the image.",
+                "zTXt": "Compressed text metadata about the image.",
+                "bKGD": "Represents default background color.",
+                "pHYs": "Specifies intended pixel size or aspect ratio.",
+                "sBIT": "Stores the original number of significant bits.",
+                "sPLT": "Suggests a reduced color palette to be used.",
+                "hIST": "Specifies the approximate usage frequency of each color in the palette.",
+                "tIME": "Specifies the last time the image was modified."
+            }
 
             function bitdepthisvalid(coltype, bitdepth)
             {
@@ -154,7 +217,11 @@
                             String.fromCharCode(imageraw[offset + 6]) +
                             String.fromCharCode(imageraw[offset + 7])
 
-                        log(`(${chunkLen} byte(s)) ${chunkType}`)
+                        chunkLenStr = chunkLen.toString().padStart(3, "0") // pads length
+
+                        if (descs[chunkType] == undefined) log(`(${chunkLenStr} byte(s)) ${chunkType} (INVALID CHUNK)`, "#f00")
+                        else log(`(${chunkLenStr} byte(s)) ${chunkType}`)
+
 
                         data = imageraw.slice(offset + 8, offset + 8 + chunkLen + 1)
                         //                             ^           ^
@@ -162,11 +229,7 @@
 
                         if (chunkType == "IDAT") IDAT += data // may be multiple idat chunks
                         else if (/^[a-z]+$/i.test(chunkType)) eval("var " + chunkType + " = data") // make var for each chunk
-                        else
-                        {
-                            log(`!WARN: STRING ${chunkType} CANNOT BE CONVERTED TO VAR!`, "#ff0")
-                            validchunks = false
-                        }
+                        else validchunks = false
 
                         chunks.push({
                             "type": chunkType,
@@ -175,6 +238,15 @@
                                 "chunkOffset": offset
                             },
                             "data": data
+                        })
+
+                        chunkDesc = descs[chunkType]
+
+                        if (chunkDesc == undefined) chunkDesc = "N/A"
+
+                        addchunks({
+                            "name": chunkType,
+                            "desc": chunkDesc,
                         })
 
                         // vvvv offset should be where the new chunk is
@@ -196,7 +268,6 @@
                     String.fromCharCode(imageraw[13]) +
                     String.fromCharCode(imageraw[14]) +
                     String.fromCharCode(imageraw[15])
-
                     */
 
                     // parse IHDR:
