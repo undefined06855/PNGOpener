@@ -22,7 +22,7 @@
                 flex-direction: row;
             }
 
-            fieldset {
+            fieldset:not(.chunk) {
                 overflow: scroll;
 
                 flex-basis: calc(50% - 40px);
@@ -44,6 +44,14 @@
             .btn {
                 width: 150px;
                 height: 150px;
+            }
+
+            .chunk {
+                padding: 15px;
+            }
+
+            .err {
+                background-color: #f00;
             }
         </style>
     </head>
@@ -74,13 +82,6 @@
 
         <script>
 
-            function buf2hex(buffer)
-            { // buffer is an ArrayBuffer
-            return [...new Uint8Array(buffer)]
-                .map(x => x.toString(16).padStart(2, '0'))
-                .join('');
-            }
-
             function log(str, bg="#fff")
             {
                 logstr += str + ""
@@ -104,12 +105,16 @@
 
             function addchunks(data)
             {
+                console.log(`Adding chunk... err?: ${data.err}`)
                 chunk = document.createElement("fieldset")
                 title = document.createElement("legend")
+
 
                 document.getElementById("chunks").appendChild(chunk)
 
                 title.innerText = data.name
+
+                data.err ? chunk.setAttribute("class", "chunk err") : chunk.setAttribute("class", "chunk")
                 
                 descDiv = document.createElement("div")
                 descDiv.innerText = data.desc
@@ -177,9 +182,12 @@
                 var reader = new FileReader();
                 
                 reader.onload = function() {
+                    console.log(event)
+
+                    log(`File name: ${file.files[0].name}`)
+
                     var arrayBuffer = this.result
                     imageraw = new Uint8Array(arrayBuffer)
-                    imagehex = buf2hex(arrayBuffer)
 
                     filetype =
                     String.fromCharCode(imageraw[1]) +
@@ -242,33 +250,33 @@
 
                         chunkDesc = descs[chunkType]
 
-                        if (chunkDesc == undefined) chunkDesc = "N/A"
+                        if (chunkDesc == undefined)
+                        {
+                            addchunks({
+                                "name": chunkType,
+                                "desc": "Erronious chunk.",
+                                "err": true
+                            })
+                        }
+                        else
+                        {
+                            addchunks({
+                                "name": chunkType,
+                                "desc": chunkDesc,
+                                "err": false
+                            })
+                        }
 
-                        addchunks({
-                            "name": chunkType,
-                            "desc": chunkDesc,
-                        })
+                        if (maxChunks == curChunk) log(`MAX CHUNKS REACHED (${maxChunks}).`, "#f00")
 
-                        // vvvv offset should be where the new chunk is
+                        // vvvv offset should (keyword: SHOULD) be where the new chunk is
+                        // vvvv doesnt work most of the time though lol
                         offset += chunkLen + 4 + 4 + 4
                         //                  len typ crc
                     }
 
                     IDAT = Uint8Array.from(IDAT)
 
-                    /*
-                    firstChunkLen = 
-                    imageraw[8] +
-                    imageraw[9] +
-                    imageraw[10] +
-                    imageraw[11]
-
-                    firstChunkType =
-                    String.fromCharCode(imageraw[12]) +
-                    String.fromCharCode(imageraw[13]) +
-                    String.fromCharCode(imageraw[14]) +
-                    String.fromCharCode(imageraw[15])
-                    */
 
                     // parse IHDR:
 
@@ -303,6 +311,8 @@
                     width > 0            &&
                     bitdepthisvalid(IHDR[9], IHDR[8])
 
+                    // log shit:
+
                     log(`Image info:`, "#0f0")
                     log(`Width: ${width}`)
                     log(`Height: ${height}`)
@@ -310,7 +320,7 @@
                     log(`Bitdepth: ${bitdepth}`)
                     if (coltype != undefined) log(`Colortype: ${coltype} (${IHDR[9]})`)
                     else                      log(`Colortype: ERR (${IHDR[9]})`)
-                    log(`Valid?: ${isvalid}`)
+                    log(`Valid?: ${isvalid}`, isvalid ? "#0f0" : "#f00")
                     log(`Valid chunks?: ${validchunks}`)
 
 
@@ -322,7 +332,18 @@
 
                     log("IHDR:", "#f0f")
                     log(IHDR, "#f0f")
-                    //binaryString = String.fromCharCode.apply(null, image);
+
+                    log("End of logs.", "#0ff")
+                    log("End of logs.", "#0ff")
+                    log("End of logs.", "#0ff")
+                    log("End of logs.", "#0ff")
+                    log("End of logs.", "#0ff")
+                    log("End of logs.", "#0ff")
+                    log("End of logs.", "#0ff")
+                    log("End of logs.", "#0ff")
+                    log("End of logs.", "#0ff")
+                    log("End of logs.", "#0ff")
+
                 }
 
                 reader.readAsArrayBuffer(file.files[0]);
