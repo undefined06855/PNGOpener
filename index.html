@@ -9,65 +9,83 @@
                 font-family: "Courier New", Courier, monospace;
             }
 
-            #wrapper {
-                display: flex;
-
-                position: fixed;
-                top: 0;
-                left: 0;
-                bottom: 0;
-                right: 0;
-
-                flex-wrap: wrap;
-                flex-direction: row;
-            }
-
-            fieldset:not(.chunk) {
-                overflow: scroll;
-
-                flex-basis: calc(50% - 40px);
-                background-color: #fff;
-                width: 50%;
-                height: 50%;
-
-                min-width: 0px;
-            }
-
-            #out {
-                min-width: 100%;
-            }
-
-            input, .btn {
-                font-size: 25px;
-            }
-
             .btn {
                 width: 150px;
                 height: 150px;
             }
 
-            .chunk {
-                padding: 15px;
+            #wrapper {
+                display: flex;
+                position: fixed;
+                top: 0;
+                left: 0;
+
+                width: 100vw;
+                height: 100vh;
+
+                max-width: 100vw;
+                max-height: 100vh;
+
+                padding-bottom: 2px;
             }
+
+            #buttons, #chunks {
+                width: 50%;
+
+                box-sizing: border-box;
+            }
+
+            #chunks, #buttons {
+                width: 500px;
+            }
+
+            #out {
+                flex: 1;
+            }
+
+            /*#buttons {
+                width: 50%;
+                height: 50%;
+            }
+
+            #chunks {
+                width: 50%;
+                height: 50%;
+            }
+
+            #out {
+                width: 100%;
+            }*/
+
 
             .err {
                 background-color: #f00;
+            }
+
+            .logline {
+                width: 500px;
+                text-overflow: ellipsis;
             }
         </style>
     </head>
 
     <body>
         <div id="wrapper">
-            <fieldset>
+            <fieldset id="buttons">
                 <legend>Buttons:</legend>
-                <input id="file" type="file" accept="image/png" /><hr/>
+                <input id="file" type="file" accept="image/png" /><br/>
+                <button onclick="file.value = null">Clear</button>
+                <hr/>
                 <button class="btn" onclick="parse()">Parse PNG</button>
                 <button class="btn" onclick="copylogs()">Copy logs</button>
+                <button class="btn" onclick="clearAll()">Clear everything</button>
             </fieldset>
 
     
             <fieldset id="chunks">
-                <legend>Chunks:</legend>
+                <legend>Chunks:
+                    <button onclick="document.getElementById('chunks').querySelectorAll('fieldset').forEach(e => e.remove());">CLEAR</button>
+                </legend>
             </fieldset>
     
             <fieldset id="out">
@@ -88,9 +106,18 @@
                 console.log(str)
                 line = document.createElement("div")
                 line.innerText = str
+                line.setAttribute("class", "logline")
                 // format warnings / errors
                 line.style.backgroundColor = bg
                 document.getElementById("out").appendChild(line)
+            }
+
+            function clearAll()
+            {
+                document.getElementById("out").querySelectorAll("div").forEach(e => e.remove())
+                logstr = ""
+                document.getElementById("chunks").querySelectorAll("fieldset").forEach(e => e.remove())
+                file.value = null
             }
 
             function copylogs()
@@ -105,7 +132,7 @@
 
             function addchunks(data)
             {
-                console.log(`Adding chunk... err?: ${data.err}`)
+                //console.log(`Adding chunk... err?: ${data.err}`)
                 chunk = document.createElement("fieldset")
                 title = document.createElement("legend")
 
@@ -179,174 +206,171 @@
 
             function parse()
             {
-                var reader = new FileReader();
+                if (file.files.length == 0)
+                {
+                    log("There is no file to parse!", "#f00")
+                }
+                else
+                {
+                    var reader = new FileReader();
                 
-                reader.onload = function() {
-                    console.log(event)
+                    reader.onload = function() {
+                        console.log(event)
 
-                    log(`File name: ${file.files[0].name}`)
+                        log(`File name: ${file.files[0].name}`)
 
-                    var arrayBuffer = this.result
-                    imageraw = new Uint8Array(arrayBuffer)
+                        var arrayBuffer = this.result
+                        imageraw = new Uint8Array(arrayBuffer)
 
-                    filetype =
-                    String.fromCharCode(imageraw[1]) +
-                    String.fromCharCode(imageraw[2]) +
-                    String.fromCharCode(imageraw[3])
+                        filetype =
+                        String.fromCharCode(imageraw[1]) +
+                        String.fromCharCode(imageraw[2]) +
+                        String.fromCharCode(imageraw[3])
 
-                    chunkType = ""
-                    chunkLen = 0
-                    offset = 8
-                    maxChunks = 10 // increase if chunks are being cut off
-                    curChunk = 0
+                        chunkType = ""
+                        chunkLen = 0
+                        offset = 8
+                        maxChunks = 10 // increase if chunks are being cut off
+                        curChunk = 0
 
-                    validchunks = true
+                        validchunks = true
 
-                    IDAT = []
-                    IHDR = ["N/A"]
+                        IDAT = []
+                        IHDR = ["N/A"]
 
-                    chunks = []
-
-
-                    // log chunks
-                    log("Chunks:", "#00f")
-                    while (chunkType != "IEND" && maxChunks > curChunk)
-                    {
-                        curChunk++
-                        chunkLen = 
-                            imageraw[offset + 0] +
-                            imageraw[offset + 1] +
-                            imageraw[offset + 2] +
-                            imageraw[offset + 3]
-                        
-                        chunkType =
-                            String.fromCharCode(imageraw[offset + 4]) +
-                            String.fromCharCode(imageraw[offset + 5]) +
-                            String.fromCharCode(imageraw[offset + 6]) +
-                            String.fromCharCode(imageraw[offset + 7])
-
-                        chunkLenStr = chunkLen.toString().padStart(3, "0") // pads length
-
-                        if (descs[chunkType] == undefined) log(`(${chunkLenStr} byte(s)) ${chunkType} (INVALID CHUNK)`, "#f00")
-                        else log(`(${chunkLenStr} byte(s)) ${chunkType}`)
+                        chunks = []
 
 
-                        data = imageraw.slice(offset + 8, offset + 8 + chunkLen + 1)
-                        //                             ^           ^
-                        //        counteract the length and type metadata in the chunk
-
-                        if (chunkType == "IDAT") IDAT += data // may be multiple idat chunks
-                        else if (/^[a-z]+$/i.test(chunkType)) eval("var " + chunkType + " = data") // make var for each chunk
-                        else validchunks = false
-
-                        chunks.push({
-                            "type": chunkType,
-                            "metadata": {
-                                "len": chunkLen,
-                                "chunkOffset": offset
-                            },
-                            "data": data
-                        })
-
-                        chunkDesc = descs[chunkType]
-
-                        if (chunkDesc == undefined)
+                        // log chunks
+                        log("Chunks:", "#00f")
+                        while (chunkType != "IEND" && maxChunks > curChunk)
                         {
-                            addchunks({
-                                "name": chunkType,
-                                "desc": "Erronious chunk.",
-                                "err": true
+                            curChunk++
+                            chunkLen = 
+                                imageraw[offset + 0] +
+                                imageraw[offset + 1] +
+                                imageraw[offset + 2] +
+                                imageraw[offset + 3]
+                            
+                            chunkType =
+                                String.fromCharCode(imageraw[offset + 4]) +
+                                String.fromCharCode(imageraw[offset + 5]) +
+                                String.fromCharCode(imageraw[offset + 6]) +
+                                String.fromCharCode(imageraw[offset + 7])
+
+                            chunkLenStr = chunkLen.toString().padStart(3, "0") // pads length
+
+                            if (descs[chunkType] == undefined) log(`(${chunkLenStr} byte(s)) ${chunkType} (INVALID CHUNK)`, "#f00")
+                            else log(`(${chunkLenStr} byte(s)) ${chunkType}`)
+
+
+                            data = imageraw.slice(offset + 8, offset + 8 + chunkLen + 1)
+                            //                             ^           ^
+                            //        counteract the length and type metadata in the chunk
+
+                            if (chunkType == "IDAT") IDAT += data // may be multiple idat chunks
+                            else if (/^[a-z]+$/i.test(chunkType)) eval("var " + chunkType + " = data") // make var for each chunk
+                            else validchunks = false
+
+                            chunks.push({
+                                "type": chunkType,
+                                "metadata": {
+                                    "len": chunkLen,
+                                    "chunkOffset": offset
+                                },
+                                "data": data
                             })
-                        }
-                        else
-                        {
-                            addchunks({
-                                "name": chunkType,
-                                "desc": chunkDesc,
-                                "err": false
-                            })
+
+                            chunkDesc = descs[chunkType]
+
+                            if (chunkDesc == undefined)
+                            {
+                                addchunks({
+                                    "name": chunkType,
+                                    "desc": "Erronious chunk.",
+                                    "err": true
+                                })
+                            }
+                            else
+                            {
+                                addchunks({
+                                    "name": chunkType,
+                                    "desc": chunkDesc,
+                                    "err": false
+                                })
+                            }
+
+                            if (maxChunks == curChunk) log(`MAX CHUNKS REACHED (${maxChunks}).`, "#f00")
+
+                            // vvvv offset should (keyword: SHOULD) be where the new chunk is
+                            // vvvv doesnt work most of the time though lol
+                            offset += chunkLen + 4 + 4 + 4
+                            //                  len typ crc
                         }
 
-                        if (maxChunks == curChunk) log(`MAX CHUNKS REACHED (${maxChunks}).`, "#f00")
+                        IDAT = Uint8Array.from(IDAT)
 
-                        // vvvv offset should (keyword: SHOULD) be where the new chunk is
-                        // vvvv doesnt work most of the time though lol
-                        offset += chunkLen + 4 + 4 + 4
-                        //                  len typ crc
+
+                        // parse IHDR:
+
+                        width =
+                        IHDR[0] +
+                        IHDR[1] +
+                        IHDR[2] +
+                        IHDR[3]
+
+                        height =
+                        IHDR[4] +
+                        IHDR[5] +
+                        IHDR[6] +
+                        IHDR[7]
+
+                        bitdepth = IHDR[8]
+
+
+                        coltype = coltypes[IHDR[9]]
+
+                        isvalid = // this should be the same in every png file
+                        imageraw[0] == 137   &&
+                        imageraw[1] == 80    &&
+                        imageraw[2] == 78    &&
+                        imageraw[3] == 71    &&
+                        imageraw[4] == 13    &&
+                        imageraw[5] == 10    &&
+                        imageraw[6] == 26    &&
+                        imageraw[7] == 10    &&
+                        coltype != undefined &&
+                        height > 0           &&
+                        width > 0            &&
+                        bitdepthisvalid(IHDR[9], IHDR[8])
+
+                        // log shit:
+
+                        log(`Image info:`, "#0f0")
+                        log(`Width: ${width}`)
+                        log(`Height: ${height}`)
+                        log(`Type: ${filetype}`)
+                        log(`Bitdepth: ${bitdepth}`)
+                        if (coltype != undefined) log(`Colortype: ${coltype} (${IHDR[9]})`)
+                        else                      log(`Colortype: ERR (${IHDR[9]})`)
+                        log(`Valid?: ${isvalid}`, isvalid ? "#0f0" : "#f00")
+                        log(`Valid chunks?: ${validchunks}`)
+
+
+
+                        //log(imageraw, "#00f")
+
+                        log("IDAT:", "#f0f")
+                        log(IDAT, "#f0f")
+
+                        log("IHDR:", "#f0f")
+                        log(IHDR, "#f0f")
+
+                        log("End of logs.", "#0ff")
                     }
 
-                    IDAT = Uint8Array.from(IDAT)
-
-
-                    // parse IHDR:
-
-                    width =
-                    IHDR[0] +
-                    IHDR[1] +
-                    IHDR[2] +
-                    IHDR[3]
-
-                    height =
-                    IHDR[4] +
-                    IHDR[5] +
-                    IHDR[6] +
-                    IHDR[7]
-
-                    bitdepth = IHDR[8]
-
-
-                    coltype = coltypes[IHDR[9]]
-
-                    isvalid = // this should be the same in every png file
-                    imageraw[0] == 137   &&
-                    imageraw[1] == 80    &&
-                    imageraw[2] == 78    &&
-                    imageraw[3] == 71    &&
-                    imageraw[4] == 13    &&
-                    imageraw[5] == 10    &&
-                    imageraw[6] == 26    &&
-                    imageraw[7] == 10    &&
-                    coltype != undefined &&
-                    height > 0           &&
-                    width > 0            &&
-                    bitdepthisvalid(IHDR[9], IHDR[8])
-
-                    // log shit:
-
-                    log(`Image info:`, "#0f0")
-                    log(`Width: ${width}`)
-                    log(`Height: ${height}`)
-                    log(`Type: ${filetype}`)
-                    log(`Bitdepth: ${bitdepth}`)
-                    if (coltype != undefined) log(`Colortype: ${coltype} (${IHDR[9]})`)
-                    else                      log(`Colortype: ERR (${IHDR[9]})`)
-                    log(`Valid?: ${isvalid}`, isvalid ? "#0f0" : "#f00")
-                    log(`Valid chunks?: ${validchunks}`)
-
-
-
-                    //log(imageraw, "#00f")
-
-                    log("IDAT:", "#f0f")
-                    log(IDAT, "#f0f")
-
-                    log("IHDR:", "#f0f")
-                    log(IHDR, "#f0f")
-
-                    log("End of logs.", "#0ff")
-                    log("End of logs.", "#0ff")
-                    log("End of logs.", "#0ff")
-                    log("End of logs.", "#0ff")
-                    log("End of logs.", "#0ff")
-                    log("End of logs.", "#0ff")
-                    log("End of logs.", "#0ff")
-                    log("End of logs.", "#0ff")
-                    log("End of logs.", "#0ff")
-                    log("End of logs.", "#0ff")
-
+                    reader.readAsArrayBuffer(file.files[0]);
                 }
-
-                reader.readAsArrayBuffer(file.files[0]);
             }
         </script>
     </body>
