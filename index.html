@@ -29,42 +29,14 @@
                 padding-bottom: 2px;
             }
 
-            #buttons, #chunks {
-                width: 50%;
-
-                box-sizing: border-box;
+            #wrapper > * {
+                overflow-y: scroll;
+                width: calc(100% / 3)
             }
-
-            #chunks, #buttons {
-                width: 500px;
-            }
-
-            #out {
-                flex: 1;
-            }
-
-            /*#buttons {
-                width: 50%;
-                height: 50%;
-            }
-
-            #chunks {
-                width: 50%;
-                height: 50%;
-            }
-
-            #out {
-                width: 100%;
-            }*/
 
 
             .err {
                 background-color: #f00;
-            }
-
-            .logline {
-                width: 500px;
-                text-overflow: ellipsis;
             }
         </style>
     </head>
@@ -100,10 +72,11 @@
 
         <script>
 
-            function log(str, bg="#fff")
+            function log(str, bg = "#fff", isChunk = false)
             {
                 logstr += str + ""
                 console.log(str)
+                isChunk ? str = str.slice(0, 20) : ""
                 line = document.createElement("div")
                 line.innerText = str
                 line.setAttribute("class", "logline")
@@ -209,6 +182,7 @@
                 if (file.files.length == 0)
                 {
                     log("There is no file to parse!", "#f00")
+                    file.click()
                 }
                 else
                 {
@@ -230,7 +204,6 @@
                         chunkType = ""
                         chunkLen = 0
                         offset = 8
-                        maxChunks = 10 // increase if chunks are being cut off
                         curChunk = 0
 
                         validchunks = true
@@ -243,14 +216,32 @@
 
                         // log chunks
                         log("Chunks:", "#00f")
-                        while (chunkType != "IEND" && maxChunks > curChunk)
+                        while (chunkType != "IEND")
                         {
                             curChunk++
-                            chunkLen = 
-                                imageraw[offset + 0] +
-                                imageraw[offset + 1] +
-                                imageraw[offset + 2] +
+                            /*chunkLen = 
+                                imageraw[offset + 0] * 255 * 255 * 255 +
+                                imageraw[offset + 1] * 255 * 255 +
+                                imageraw[offset + 2] * 255 +
+                                imageraw[offset + 3]*/
+
+                            chunkLenArr = new Uint8Array([
+                                imageraw[offset + 0],
+                                imageraw[offset + 1],
+                                imageraw[offset + 2],
                                 imageraw[offset + 3]
+                            ])
+
+                            chunklenArrView = new DataView(chunkLenArr.buffer)
+
+                            chunkLen = chunklenArrView.getInt32()
+
+                            console.table({
+                                "0": imageraw[offset + 0],
+                                "1": imageraw[offset + 1],
+                                "2": imageraw[offset + 2],
+                                "3": imageraw[offset + 3],
+                            })
                             
                             chunkType =
                                 String.fromCharCode(imageraw[offset + 4]) +
@@ -300,12 +291,7 @@
                                 })
                             }
 
-                            if (maxChunks == curChunk) log(`MAX CHUNKS REACHED (${maxChunks}).`, "#f00")
-
-                            // vvvv offset should (keyword: SHOULD) be where the new chunk is
-                            // vvvv doesnt work most of the time though lol
                             offset += chunkLen + 4 + 4 + 4
-                            //                  len typ crc
                         }
 
                         IDAT = Uint8Array.from(IDAT)
@@ -361,9 +347,9 @@
                         //log(imageraw, "#00f")
 
                         log("IDAT:", "#f0f")
-                        log(IDAT, "#f0f")
+                        log(IDAT, "#f0f", true)
 
-                        log("IHDR:", "#f0f")
+                        log("IHDR:", "#f0f", true)
                         log(IHDR, "#f0f")
 
                         log("End of logs.", "#0ff")
