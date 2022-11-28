@@ -46,6 +46,8 @@ renderingintents = [
     "Absolute colorimetric"
 ]
 
+// cannotparse = ["IDAT", "IEND", "iCCP", "zTXt"]
+
 canparse = ["PLTE", "IHDR", "gAMA", "sRGB", "tRNS", "iTXt", "tEXt", "tIME", "bKGD", "pHYs", "sPLT", "hIST", "sBIT", "cHRM"]
 
 document.querySelector("#wrapper").addEventListener("dragover", ev => {
