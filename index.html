@@ -31,333 +31,59 @@
 
             #wrapper > * {
                 overflow-y: scroll;
-                width: calc(100% / 3)
+                width: 50%;
             }
-
 
             .err {
                 background-color: #f00;
             }
+
+            #details > span {
+                float: right;
+            }
+
+            #details > #ch_special_parsed {
+                float: left;
+            }
+
+            .chunk > * {
+                pointer-events: none;
+            }
+
         </style>
     </head>
 
     <body>
         <div id="wrapper">
-            <fieldset id="buttons">
-                <legend>Buttons:</legend>
-                <input id="file" type="file" accept="image/png" /><br/>
-                <button onclick="file.value = null">Clear</button>
-                <hr/>
-                <button class="btn" onclick="parse()">Parse PNG</button>
-                <button class="btn" onclick="copylogs()">Copy logs</button>
-                <button class="btn" onclick="clearAll()">Clear everything</button>
-            </fieldset>
-
-    
             <fieldset id="chunks">
                 <legend>Chunks:
-                    <button onclick="document.getElementById('chunks').querySelectorAll('fieldset').forEach(e => e.remove());">CLEAR</button>
+                    <button onclick="document.getElementById('chunks').querySelectorAll('fieldset').forEach(e => e.remove()); IHDR = new Uint8Array(); IDAT = new Uint8Array()">CLEAR</button>
                 </legend>
+                Drag + Drop your image here!
             </fieldset>
     
-            <fieldset id="out">
-                <legend>Log:
-                    <button onclick="document.getElementById('out').querySelectorAll('div').forEach(e => e.remove()); logstr = ''">CLEAR</button>
-                    <button onclick="copylogs()"><b>COPY</b></button>
-                </legend>
+            <fieldset id="details">
+                <legend>Chunk details:</legend>
+
+                Type: <span id="ch_type"></span><br/>
+                Description: <span id="ch_desc"></span><br/>
+                Size: <span id="ch_size"></span><br/>
+                Offset: <span id="ch_offset"></span><br/>
+                <hr/>
+                Critical: <span id="ch_flag1"></span><br/>
+                Public: <span id="ch_flag2"></span><br/>
+                Valid: <span id="ch_flag3"></span><br/>
+                Safe-to-copy: <span id="ch_flag4"></span><br/>
+                <hr/>
+                Contents as string: <span id="ch_special_contents"></span><br/>
+                Data: <span id="ch_data"></span><br/>
+                <hr/>
+                <span id="ch_special_parsed"></span>
             </fieldset>
         </div>
 
-        <!--canvas id="canvas">your browser does not support canvas :( get a better browser</canvas-->
-
-        <script>
-
-            function log(str, bg = "#fff", isChunk = false)
-            {
-                logstr += str + ""
-                console.log(str)
-                isChunk ? str = str.slice(0, 20) : ""
-                line = document.createElement("div")
-                line.innerText = str
-                line.setAttribute("class", "logline")
-                // format warnings / errors
-                line.style.backgroundColor = bg
-                document.getElementById("out").appendChild(line)
-            }
-
-            function clearAll()
-            {
-                document.getElementById("out").querySelectorAll("div").forEach(e => e.remove())
-                logstr = ""
-                document.getElementById("chunks").querySelectorAll("fieldset").forEach(e => e.remove())
-                file.value = null
-            }
-
-            function copylogs()
-            { // def not copied from stackoverflow :)))))
-                const mySmartTextarea = document.createElement("textarea");
-                mySmartTextarea.innerHTML = logstr;
-                const parentElement = document.body.appendChild(mySmartTextarea);
-                mySmartTextarea.select();
-                document.execCommand("copy");
-                document.body.removeChild(mySmartTextarea);
-            }
-
-            function addchunks(data)
-            {
-                //console.log(`Adding chunk... err?: ${data.err}`)
-                chunk = document.createElement("fieldset")
-                title = document.createElement("legend")
-
-
-                document.getElementById("chunks").appendChild(chunk)
-
-                title.innerText = data.name
-
-                data.err ? chunk.setAttribute("class", "chunk err") : chunk.setAttribute("class", "chunk")
-                
-                descDiv = document.createElement("div")
-                descDiv.innerText = data.desc
-
-                chunk.appendChild(title)
-
-                chunk.appendChild(descDiv)
-            }
-
-            logstr = ""
-
-            file = document.querySelector("#file")
-
-            filetype = "N/A"
-            isvalid = false
-
-            coltypes = [
-                "greyscale",
-                "ERROR - OUT OF RANGE (1)",
-                "truecolor",
-                "indexed-color",
-                "greyscale+alpha",
-                "ERROR - OUT OF RANGE (5)",
-                "truecolor+alpha"
-            ]
-
-            validbitdepths = [
-                [1, 2, 4, 8, 16],
-                [-1],
-                [8, 16],
-                [1, 2, 4, 8],
-                [8, 16],
-                [-1],
-                [8, 16]
-            ]
-            
-            descs = {
-                "IHDR": "Image header chunk.",
-                "PLTE": "Palette entries.",
-                "IDAT": "Actual image data.",
-                "IEND": "End of the image file.",
-                "tRNS": "Indicates that the image uses \"simple\" transparency.",
-                "gAMA": "The gamma value of the image.",
-                "cHRM": "Specifies chromaticities of the red, green, and blue primaries.",
-                "sRGB": "Indicates that the image conforms to the sRGB color space.",
-                "iCCP": "Indicates that the image conforms to the embedded ICC profile.",
-                "iTXt": "International text metadata about the image.",
-                "tEXt": "Text metadata about the image.",
-                "zTXt": "Compressed text metadata about the image.",
-                "bKGD": "Represents default background color.",
-                "pHYs": "Specifies intended pixel size or aspect ratio.",
-                "sBIT": "Stores the original number of significant bits.",
-                "sPLT": "Suggests a reduced color palette to be used.",
-                "hIST": "Specifies the approximate usage frequency of each color in the palette.",
-                "tIME": "Specifies the last time the image was modified."
-            }
-
-            function bitdepthisvalid(coltype, bitdepth)
-            {
-                return validbitdepths[coltype].includes(bitdepth)
-            }
-
-            function parse()
-            {
-                if (file.files.length == 0)
-                {
-                    log("There is no file to parse!", "#f00")
-                    file.click()
-                }
-                else
-                {
-                    var reader = new FileReader();
-                
-                    reader.onload = function() {
-                        console.log(event)
-
-                        log(`File name: ${file.files[0].name}`)
-
-                        var arrayBuffer = this.result
-                        imageraw = new Uint8Array(arrayBuffer)
-
-                        filetype =
-                        String.fromCharCode(imageraw[1]) +
-                        String.fromCharCode(imageraw[2]) +
-                        String.fromCharCode(imageraw[3])
-
-                        chunkType = ""
-                        chunkLen = 0
-                        offset = 8
-                        curChunk = 0
-
-                        validchunks = true
-
-                        IDAT = []
-                        IHDR = ["N/A"]
-
-                        chunks = []
-
-
-                        // log chunks
-                        log("Chunks:", "#00f")
-                        while (chunkType != "IEND")
-                        {
-                            curChunk++
-                            /*chunkLen = 
-                                imageraw[offset + 0] * 255 * 255 * 255 +
-                                imageraw[offset + 1] * 255 * 255 +
-                                imageraw[offset + 2] * 255 +
-                                imageraw[offset + 3]*/
-
-                            chunkLenArr = new Uint8Array([
-                                imageraw[offset + 0],
-                                imageraw[offset + 1],
-                                imageraw[offset + 2],
-                                imageraw[offset + 3]
-                            ])
-
-                            chunklenArrView = new DataView(chunkLenArr.buffer)
-
-                            chunkLen = chunklenArrView.getInt32()
-
-                            console.table({
-                                "0": imageraw[offset + 0],
-                                "1": imageraw[offset + 1],
-                                "2": imageraw[offset + 2],
-                                "3": imageraw[offset + 3],
-                            })
-                            
-                            chunkType =
-                                String.fromCharCode(imageraw[offset + 4]) +
-                                String.fromCharCode(imageraw[offset + 5]) +
-                                String.fromCharCode(imageraw[offset + 6]) +
-                                String.fromCharCode(imageraw[offset + 7])
-
-                            chunkLenStr = chunkLen.toString().padStart(3, "0") // pads length
-
-                            if (descs[chunkType] == undefined) log(`(${chunkLenStr} byte(s)) ${chunkType} (INVALID CHUNK)`, "#f00")
-                            else log(`(${chunkLenStr} byte(s)) ${chunkType}`)
-
-
-                            data = imageraw.slice(offset + 8, offset + 8 + chunkLen + 1)
-                            //                             ^           ^
-                            //        counteract the length and type metadata in the chunk
-
-                            if (chunkType == "IDAT") IDAT += data // may be multiple idat chunks
-                            else if (/^[a-z]+$/i.test(chunkType)) eval("var " + chunkType + " = data") // make var for each chunk
-                            else validchunks = false
-
-                            chunks.push({
-                                "type": chunkType,
-                                "metadata": {
-                                    "len": chunkLen,
-                                    "chunkOffset": offset
-                                },
-                                "data": data
-                            })
-
-                            chunkDesc = descs[chunkType]
-
-                            if (chunkDesc == undefined)
-                            {
-                                addchunks({
-                                    "name": chunkType,
-                                    "desc": "Erronious chunk.",
-                                    "err": true
-                                })
-                            }
-                            else
-                            {
-                                addchunks({
-                                    "name": chunkType,
-                                    "desc": chunkDesc,
-                                    "err": false
-                                })
-                            }
-
-                            offset += chunkLen + 4 + 4 + 4
-                        }
-
-                        IDAT = Uint8Array.from(IDAT)
-
-
-                        // parse IHDR:
-
-                        width =
-                        IHDR[0] +
-                        IHDR[1] +
-                        IHDR[2] +
-                        IHDR[3]
-
-                        height =
-                        IHDR[4] +
-                        IHDR[5] +
-                        IHDR[6] +
-                        IHDR[7]
-
-                        bitdepth = IHDR[8]
-
-
-                        coltype = coltypes[IHDR[9]]
-
-                        isvalid = // this should be the same in every png file
-                        imageraw[0] == 137   &&
-                        imageraw[1] == 80    &&
-                        imageraw[2] == 78    &&
-                        imageraw[3] == 71    &&
-                        imageraw[4] == 13    &&
-                        imageraw[5] == 10    &&
-                        imageraw[6] == 26    &&
-                        imageraw[7] == 10    &&
-                        coltype != undefined &&
-                        height > 0           &&
-                        width > 0            &&
-                        bitdepthisvalid(IHDR[9], IHDR[8])
-
-                        // log shit:
-
-                        log(`Image info:`, "#0f0")
-                        log(`Width: ${width}`)
-                        log(`Height: ${height}`)
-                        log(`Type: ${filetype}`)
-                        log(`Bitdepth: ${bitdepth}`)
-                        if (coltype != undefined) log(`Colortype: ${coltype} (${IHDR[9]})`)
-                        else                      log(`Colortype: ERR (${IHDR[9]})`)
-                        log(`Valid?: ${isvalid}`, isvalid ? "#0f0" : "#f00")
-                        log(`Valid chunks?: ${validchunks}`)
-
-
-
-                        //log(imageraw, "#00f")
-
-                        log("IDAT:", "#f0f")
-                        log(IDAT, "#f0f", true)
-
-                        log("IHDR:", "#f0f", true)
-                        log(IHDR, "#f0f")
-
-                        log("End of logs.", "#0ff")
-                    }
-
-                    reader.readAsArrayBuffer(file.files[0]);
-                }
-            }
-        </script>
+        <script src="functions.js"></script>
+        <script src="parse.js"></script>
+        <script src="main.js"></script>
     </body>
 </html>
