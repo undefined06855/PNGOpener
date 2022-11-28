@@ -20,7 +20,7 @@ validbitdepths = [
 
 descs = {
     "IHDR": "Image header chunk.",
-    "PLTE": "Palette entries.",
+    "PLTE": "1 to 255 palette entries.",
     "IDAT": "Actual image data.",
     "IEND": "End of the image file.",
     "tRNS": "Indicates that the image uses \"simple\" transparency.",
@@ -46,8 +46,7 @@ renderingintents = [
     "Absolute colorimetric"
 ]
 
-includesutf8 = ["iTXt", "tEXt"]
-canparse = ["PLTE", "IHDR", "gAMA", "sRGB", "tRNS"]
+canparse = ["PLTE", "IHDR", "gAMA", "sRGB", "tRNS", "iTXt", "tEXt", "tIME", "bKGD", "pHYs", "sPLT", "hIST", "sBIT", "cHRM"]
 
 document.querySelector("#wrapper").addEventListener("dragover", ev => {
     // janky stuff

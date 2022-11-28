@@ -2,7 +2,7 @@
 
 <html dir="ltr" lang="en">
     <head>
-        <title>png opener</title>
+        <title>PNGOpener</title>
 
         <style>
             * {
@@ -16,17 +16,17 @@
 
             #wrapper {
                 display: flex;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                justify-content: space-evenly;
+                align-items: stretch;
+                
                 position: fixed;
                 top: 0;
                 left: 0;
 
                 width: 100vw;
                 height: 100vh;
-
-                max-width: 100vw;
-                max-height: 100vh;
-
-                padding-bottom: 2px;
             }
 
             #wrapper > * {
@@ -38,7 +38,7 @@
                 background-color: #f00;
             }
 
-            #details > span {
+            #details > .detail > span {
                 float: right;
             }
 
@@ -50,40 +50,48 @@
                 pointer-events: none;
             }
 
+            #docu_button {
+                margin-bottom: 3px;
+            }
+
+            .detail {
+                display: inline-block;
+                width: 100%;
+            }
         </style>
     </head>
 
     <body>
         <div id="wrapper">
             <fieldset id="chunks">
-                <legend>Chunks:
-                    <button onclick="document.getElementById('chunks').querySelectorAll('fieldset').forEach(e => e.remove()); IHDR = new Uint8Array(); IDAT = new Uint8Array()">CLEAR</button>
-                </legend>
+                <legend>Chunks:</legend>
                 Drag + Drop your image here!
             </fieldset>
     
             <fieldset id="details">
                 <legend>Chunk details:</legend>
 
-                Type: <span id="ch_type"></span><br/>
-                Description: <span id="ch_desc"></span><br/>
-                Size: <span id="ch_size"></span><br/>
-                Offset: <span id="ch_offset"></span><br/>
+                <button id="docu_button" onclick="window.location.href = 'http:\/\/www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.' + document.querySelector('#ch_type').innerText" disabled>See documentation for this chunk</button><br/>
+                <span class="detail">Type: <span id="ch_type"></span></span><br/>
+                <span class="detail">Description: <span id="ch_desc"></span></span><br/>
+                <span class="detail">Size: <span id="ch_size"></span></span><br/>
+                <span class="detail">Offset: <span id="ch_offset"></span></span><br/>
+                <span class="detail">CRC32: <span id="ch_crc"></span></span><br/>
                 <hr/>
-                Critical: <span id="ch_flag1"></span><br/>
-                Public: <span id="ch_flag2"></span><br/>
-                Valid: <span id="ch_flag3"></span><br/>
-                Safe-to-copy: <span id="ch_flag4"></span><br/>
+                <span class="detail">Critical: <span id="ch_flag1"></span></span><br/>
+                <span class="detail">Public: <span id="ch_flag2"></span></span><br/>
+                <span class="detail">Valid: <span id="ch_flag3"></span></span><br/>
+                <span class="detail">Safe-to-copy: <span id="ch_flag4"></span></span><br/>
                 <hr/>
-                Contents as string: <span id="ch_special_contents"></span><br/>
-                Data: <span id="ch_data"></span><br/>
+                <span class="detail">Data: <span id="ch_data"></span></span><br/>
                 <hr/>
-                <span id="ch_special_parsed"></span>
+                <span id="ch_special_parsed"></span><br/>
             </fieldset>
         </div>
 
         <script src="functions.js"></script>
-        <script src="parse.js"></script>
+        <script src="parse/generic.js"></script>
+        <script src="parse/special.js"></script>
         <script src="main.js"></script>
     </body>
 </html>
