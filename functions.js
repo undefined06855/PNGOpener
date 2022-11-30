@@ -1,6 +1,10 @@
 const arr32ToVal = arr => {return new DataView(new Uint8Array(arr).buffer).getUint32()}
 const arr16ToVal = arr => {return new DataView(new Uint8Array(arr).buffer).getUint16()}
 
+const isCapital = str => { return str == str.toUpperCase() }
+const bitDepthValid = (coltype, bitdepth) => {return validbitdepths[coltype].includes(bitdepth)}
+const toDetail = (name, value, newl) => { return `<span class="detail">${name}: <span>${value}</span></span>${newl ? "<br/>" : ""}` }
+
 function mergeToHex(arr)
 {
     var str = ""
@@ -21,7 +25,6 @@ function textToNullChar(arr, index = 0)
 
 function addchunks(data, index)
 {
-    //console.log(`Adding chunk... err?: ${data.err}`)
     chunk = document.createElement("fieldset")
     title = document.createElement("legend")
 
@@ -63,11 +66,8 @@ function addchunks(data, index)
         document.querySelector("#ch_data").innerText = chunks[index].data
 
         if (canparse.includes(chunks[index].type))
-        document.querySelector("#ch_special_parsed").innerText = parsechunkdata(chunks[index].data, chunks[index].type)
+        document.querySelector("#ch_special_parsed").innerHTML = specialParse(chunks[index].data, chunks[index].type)
         else
-        document.querySelector("#ch_special_parsed").innerText = ""
+        document.querySelector("#ch_special_parsed").innerHTML = ""
     })
 }
-
-const iscapital = str => { return str == str.toUpperCase() }
-const bitdepthisvalid = (coltype, bitdepth) => {return validbitdepths[coltype].includes(bitdepth)}

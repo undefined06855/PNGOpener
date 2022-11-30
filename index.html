@@ -24,25 +24,42 @@
                 position: fixed;
                 top: 0;
                 left: 0;
+                bottom: 0;
+                right: 0;
 
-                width: 100vw;
-                height: 100vh;
+                padding: 15px;
+
+                background-color: rgb(0, 0, 0);
+                color: rgb(255, 255, 255);
+            }
+
+            button {
+                background-color: white;
             }
 
             #wrapper > * {
                 overflow-y: scroll;
-                width: 50%;
+            }
+
+            #chunks {
+                width: 30%;
+            }
+
+            #details {
+                width: 70%;
             }
 
             .err {
                 background-color: #f00;
             }
 
-            #details > .detail > span {
+            .detail > span {
                 float: right;
+                overflow: visible;
             }
 
             #details > #ch_special_parsed {
+                width: 100%;
                 float: left;
             }
 
@@ -65,13 +82,13 @@
         <div id="wrapper">
             <fieldset id="chunks">
                 <legend>Chunks:</legend>
-                Drag + Drop your image here!
+                Drag + Drop your image anywhere to see the chunks
             </fieldset>
     
             <fieldset id="details">
                 <legend>Chunk details:</legend>
 
-                <button id="docu_button" onclick="window.location.href = 'http:\/\/www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.' + document.querySelector('#ch_type').innerText" disabled>See documentation for this chunk</button><br/>
+                <button id="docu_button" onclick="window.open('http:\/\/www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.' + document.querySelector('#ch_type').innerText, '_blank')" disabled>See documentation for this chunk</button><br/>
                 <span class="detail">Type: <span id="ch_type"></span></span><br/>
                 <span class="detail">Description: <span id="ch_desc"></span></span><br/>
                 <span class="detail">Size: <span id="ch_size"></span></span><br/>
@@ -85,7 +102,7 @@
                 <hr/>
                 <span class="detail">Data: <span id="ch_data"></span></span><br/>
                 <hr/>
-                <span id="ch_special_parsed"></span><br/>
+                <span id="ch_special_parsed"></span>
             </fieldset>
         </div>
 
