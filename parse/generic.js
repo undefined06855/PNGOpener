@@ -53,6 +53,7 @@ function parse(event)
                     String.fromCharCode(imageraw[offset + 6]) +
                     String.fromCharCode(imageraw[offset + 7])
 
+                shortChunkDesc = shortdescs[chunkType]
                 chunkDesc = descs[chunkType]
 
                 chunkLenStr = chunkLen.toString().padStart(3, "0") // pads length
@@ -74,21 +75,20 @@ function parse(event)
                         offset: offset
                     },
                     flags: {
-                        critical:     iscapital(chunkType.charAt(0)),
-                        public:       iscapital(chunkType.charAt(1)),
-                        valid:        iscapital(chunkType.charAt(2)),
-                        safetocopy: iscapital(chunkType.charAt(3)),
+                        critical:     isCapital(chunkType.charAt(0)),
+                        public:       isCapital(chunkType.charAt(1)),
+                        valid:        isCapital(chunkType.charAt(2)),
+                        safetocopy: isCapital(chunkType.charAt(3)),
                     },
                     data: data
                 })
-
-                chunkDesc = descs[chunkType]
 
                 if (chunkDesc == undefined)
                 {
                     addchunks({
                         "name": chunkType,
                         "desc": "Erronious chunk.",
+                        "shortdesc": "Erronious chunk.",
                         "err": true
                     }, curChunk)
                 }
@@ -96,7 +96,7 @@ function parse(event)
                 {
                     addchunks({
                         "name": chunkType,
-                        "desc": chunkDesc,
+                        "desc": shortChunkDesc,
                         "err": false
                     }, curChunk)
                 }
@@ -139,7 +139,7 @@ function parse(event)
             coltype != undefined &&
             height > 0           &&
             width > 0            &&
-            bitdepthisvalid(IHDR[9], IHDR[8])
+            bitDepthValid(IHDR[9], IHDR[8])
 
 
             console.table({
